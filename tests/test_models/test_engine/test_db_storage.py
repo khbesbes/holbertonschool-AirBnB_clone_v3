@@ -14,6 +14,7 @@ from models.place import Place
 from models.review import Review
 from models.state import State
 from models.user import User
+from models.engine.file_storage import FileStorage
 import json
 import os
 import pep8
@@ -41,7 +42,7 @@ class TestDBStorageDocs(unittest.TestCase):
         """Test tests/test_models/test_db_storage.py conforms to PEP8."""
         pep8s = pep8.StyleGuide(quiet=True)
         result = pep8s.check_files(['tests/test_models/test_engine/\
-test_db_storage.py'])
+                            test_db_storage.py'])
         self.assertEqual(result.total_errors, 0,
                          "Found code style errors (and warnings).")
 
@@ -67,6 +68,31 @@ test_db_storage.py'])
             self.assertTrue(len(func[1].__doc__) >= 1,
                             "{:s} method needs a docstring".format(func[0]))
 
+    def setUp(self):
+        """Set up the DBStorage object and create necessary tables"""
+        self.db = DBStorage()
+        BaseModel.metadata.create_all(self.db._DBStorage__engine)
+        self.db.reload()
+
+        """add some data to the database"""
+        user1 = User(name='John', age=30)
+        user2 = User(name='Mary', age=25)
+        self.db.add(user1)
+        self.db.add(user2)
+        self.db.commit()
+
+    def tearDown(self):
+        """drop the test database after each test"""
+        self.db.drop_all()
+
+    def test_get(self):
+        """test retrieving a user by ID"""
+        user = self.db.get(User, 1)
+        self.assertEqual(user.name, 'John')
+
+        """test retrieving a non-existent user"""
+        user = self.db.get(User, 3)
+        self.assertIsNone(user)
 
 class TestFileStorage(unittest.TestCase):
     """Test the FileStorage class"""
